@@ -71,7 +71,7 @@ def get_input_and_rules_dicts(filename):
 def fix_sequence(invalid_sequence: List[int], prec_dict, succ_dict):
 
     valid_list = list()
-    # Rotate until the first element in the sublist is valid. We assume the set of rules is complete
+    # Rotate and get the first element of the sublist when found valid. We assume the set of rules is complete
     # and that there is only one valid shift even if we do not verify the already validated elements
     while len(invalid_sequence) > 0:
         valid_shift = [
