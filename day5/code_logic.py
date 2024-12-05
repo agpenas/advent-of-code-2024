@@ -11,32 +11,36 @@ dotenv.load_dotenv()
 
 
 ## Implementation of PART 1
+
+
 def split_input(lines: List[str]) -> Tuple[List[str], List[str]]:
     split_idx = [idx for idx, line in enumerate(lines) if len(line) == 0]
     return lines[: split_idx[0]], lines[split_idx[0] + 1 :]
 
 
-def create_rules_dict(rules: List[str]) -> Tuple[Dict[int, Set[int]]]:
-    preceding_rules_dict = defaultdict(set)
+def get_input_and_rules_dicts(filename):
+    lines = read_input_lines(filename)
+    rules, input = split_input(lines)
+    input_formatted = [list(map(int, line.split(","))) for line in input]
+    rules_dict = create_rules_dict(rules)
+    return input_formatted, rules_dict
+
+
+def create_rules_dict(rules: List[str]) -> Dict[int, Set[int]]:
     succeeding_rules_dict = defaultdict(set)
     for rule in rules:
         int1, int2 = map(int, rule.split("|"))
         succeeding_rules_dict[int1].add(int2)
-        preceding_rules_dict[int2].add(int1)
-    return succeeding_rules_dict, preceding_rules_dict
+    return succeeding_rules_dict
 
 
 def validate_printing_order(
-    prec_dict: Dict[int, Set[int]],
-    succ_dict: Dict[int, Set[int]],
+    rules_dict: Dict[int, Set[int]],
     printing_order: List[str],
 ) -> List[bool]:
     validity_list = list()
     for idx, item in enumerate(printing_order):
-        if any([prec not in prec_dict[item] for prec in printing_order[:idx]]):
-            validity_list.append(False)
-            continue
-        if any([succ not in succ_dict[item] for succ in printing_order[idx + 1 :]]):
+        if any([succ not in rules_dict[item] for succ in printing_order[idx + 1 :]]):
             validity_list.append(False)
             continue
         validity_list.append(True)
@@ -44,11 +48,11 @@ def validate_printing_order(
 
 
 def solve_level1(filename: str):
-    input_formatted, succ_dict, prec_dict = get_input_and_rules_dicts(filename)
+    input_formatted, rules_dict = get_input_and_rules_dicts(filename)
     valid_orders = [
         order
         for order in input_formatted
-        if all(validate_printing_order(prec_dict, succ_dict, order))
+        if all(validate_printing_order(rules_dict, order))
     ]
     return calculate_middle_item_sum(valid_orders)
 
@@ -57,18 +61,10 @@ def calculate_middle_item_sum(valid_orders):
     return sum([order[math.floor(len(order) / 2)] for order in valid_orders])
 
 
-def get_input_and_rules_dicts(filename):
-    lines = read_input_lines(filename)
-    rules, input = split_input(lines)
-    input_formatted = [list(map(int, line.split(","))) for line in input]
-    succ_dict, prec_dict = create_rules_dict(rules)
-    return input_formatted, succ_dict, prec_dict
-
-
 ## Implementation of PART 2
 
 
-def fix_sequence(invalid_sequence: List[int], prec_dict, succ_dict):
+def fix_sequence(invalid_sequence: List[int], rules_dict):
 
     valid_list = list()
     # Rotate and get the first element of the sublist when found valid. We assume the set of rules is complete
@@ -77,7 +73,7 @@ def fix_sequence(invalid_sequence: List[int], prec_dict, succ_dict):
         valid_shift = [
             list(shift)
             for shift in circular_shifts(invalid_sequence, -1)
-            if validate_printing_order(prec_dict, succ_dict, shift)[0]
+            if validate_printing_order(rules_dict, shift)[0]
         ][0]
         valid_list.append(valid_shift.pop(0))
         invalid_sequence = valid_shift
@@ -85,15 +81,13 @@ def fix_sequence(invalid_sequence: List[int], prec_dict, succ_dict):
 
 
 def solve_level2(filename: str):
-    input_formatted, succ_dict, prec_dict = get_input_and_rules_dicts(filename)
+    input_formatted, rules_dict = get_input_and_rules_dicts(filename)
     invalid_orders = [
         order
         for order in input_formatted
-        if not all(validate_printing_order(prec_dict, succ_dict, order))
+        if not all(validate_printing_order(rules_dict, order))
     ]
-    fixed_sequences = [
-        fix_sequence(seq, prec_dict, succ_dict) for seq in invalid_orders
-    ]
+    fixed_sequences = [fix_sequence(seq, rules_dict) for seq in invalid_orders]
     return calculate_middle_item_sum(fixed_sequences)
 
 
