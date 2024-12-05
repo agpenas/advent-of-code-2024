@@ -1,4 +1,5 @@
 from collections import defaultdict
+from more_itertools import circular_shifts
 import math
 import os.path
 from typing import Dict, List, Set, Tuple
@@ -29,35 +30,71 @@ def validate_printing_order(
     prec_dict: Dict[int, Set[int]],
     succ_dict: Dict[int, Set[int]],
     printing_order: List[str],
-) -> bool:
+) -> List[bool]:
+    validity_list = list()
     for idx, item in enumerate(printing_order):
         if any([prec not in prec_dict[item] for prec in printing_order[:idx]]):
-            return False
+            validity_list.append(False)
+            continue
         if any([succ not in succ_dict[item] for succ in printing_order[idx + 1 :]]):
-            return False
-    return True
+            validity_list.append(False)
+            continue
+        validity_list.append(True)
+    return validity_list
 
 
 def solve_level1(filename: str):
+    input_formatted, succ_dict, prec_dict = get_input_and_rules_dicts(filename)
+    valid_orders = [
+        order
+        for order in input_formatted
+        if all(validate_printing_order(prec_dict, succ_dict, order))
+    ]
+    return calculate_middle_item_sum(valid_orders)
+
+
+def calculate_middle_item_sum(valid_orders):
+    return sum([order[math.floor(len(order) / 2)] for order in valid_orders])
+
+
+def get_input_and_rules_dicts(filename):
     lines = read_input_lines(filename)
     rules, input = split_input(lines)
     input_formatted = [list(map(int, line.split(","))) for line in input]
     succ_dict, prec_dict = create_rules_dict(rules)
-    valid_orders = [
-        order
-        for order in input_formatted
-        if validate_printing_order(prec_dict, succ_dict, order)
-    ]
-    return sum([order[math.floor(len(order) / 2)] for order in valid_orders])
+    return input_formatted, succ_dict, prec_dict
 
 
 ## Implementation of PART 2
 
 
+def fix_sequence(invalid_sequence: List[int], prec_dict, succ_dict):
+
+    valid_list = list()
+    # Rotate until the first element in the sublist is valid. We assume the set of rules is complete
+    # and that there is only one valid shift even if we do not verify the already validated elements
+    while len(invalid_sequence) > 0:
+        valid_shift = [
+            list(shift)
+            for shift in circular_shifts(invalid_sequence, -1)
+            if validate_printing_order(prec_dict, succ_dict, shift)[0]
+        ][0]
+        valid_list.append(valid_shift.pop(0))
+        invalid_sequence = valid_shift
+    return valid_list
+
+
 def solve_level2(filename: str):
-    lines = read_input_lines(filename)
-    result = 2
-    return result
+    input_formatted, succ_dict, prec_dict = get_input_and_rules_dicts(filename)
+    invalid_orders = [
+        order
+        for order in input_formatted
+        if not all(validate_printing_order(prec_dict, succ_dict, order))
+    ]
+    fixed_sequences = [
+        fix_sequence(seq, prec_dict, succ_dict) for seq in invalid_orders
+    ]
+    return calculate_middle_item_sum(fixed_sequences)
 
 
 if __name__ == "__main__":
@@ -70,5 +107,5 @@ if __name__ == "__main__":
 
     get_input_if_not_exists(2024, current_directory, 1)
     print(solve_level1(filename1))
-    # get_input_if_not_exists(2024, current_directory, 2)
-    # print(solve_level2(filename2))
+    get_input_if_not_exists(2024, current_directory, 2)
+    print(solve_level2(filename2))

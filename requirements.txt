@@ -1,4 +1,5 @@
 bs4
+more-itertools
 python-dotenv
 pandas
 pytest
