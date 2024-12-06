@@ -10,7 +10,7 @@ class TestAdventOfCode:
         assert solve_level1(f"{current_directory}/sample1.txt") == 18
 
     def test_part1_input(self):
-        assert solve_level1(f"{current_directory}/input2.txt") == 2464
+        assert solve_level1(f"{current_directory}/input1.txt") == 2464
 
     def test_part2_sample(self):
         assert solve_level2(f"{current_directory}/sample1.txt") == 9
