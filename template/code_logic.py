@@ -12,7 +12,6 @@ dotenv.load_dotenv()
 
 def solve_level1(filename: str):
     lines = read_input_lines(filename)
-
     result = 1
 
     return result
