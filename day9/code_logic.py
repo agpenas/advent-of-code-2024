@@ -1,33 +1,15 @@
-from collections import deque
-from functools import reduce
-from itertools import chain
 import math
 import os.path
 import re
+from collections import deque
+from functools import reduce
+from itertools import chain, zip_longest
 from typing import List, Tuple
-import dotenv
 
+import dotenv
 from utils.utils import get_input_if_not_exists, read_input_lines
 
 dotenv.load_dotenv()
-
-
-def get_first_dot_index(space_list: List[str]) -> int:
-    for idx, char in enumerate(space_list):
-        if char == ".":
-            return idx
-    raise ValueError("No dot found in list")
-
-
-def get_last_digit_index(space_list: List[str]) -> int:
-    for idx, char in enumerate(reversed(space_list)):
-        if char.isdigit():
-            return len(space_list) - idx - 1
-    raise ValueError("No digits found in list")
-
-
-def split_string(string: str) -> List[str]:
-    return [char for char in string]
 
 
 ## Implementation of PART 1
@@ -35,37 +17,65 @@ def split_string(string: str) -> List[str]:
 
 def solve_level1(filename: str):
     lines = read_input_lines(filename)[0]
-    chained_items = chain.from_iterable(
-        zip(
-            [
-                str(idx) * int(char) if char != "0" else []
-                for idx, char in enumerate(lines[::2])
-            ],
-            ["." * int(char) if char != "0" else [] for char in lines[1::2]] + ["."],
-        )
+    files_list, spaces_list = split_input_line(lines)
+    moved_files = list()
+    for spaces_idx in range(len(spaces_list)):
+        relocated_files = list()
+
+        while spaces_list[spaces_idx] > 0:
+            relocated_files.append(files_list[-1].pop(-1))
+            spaces_list[spaces_idx] -= 1
+            if len(files_list[-1]) == 0:
+                files_list.pop(-1)
+        moved_files.append(relocated_files)
+        if len(files_list) <= len(moved_files) + 1:
+            break
+
+    return calculate_checksum(files_list, moved_files)
+
+
+def split_input_line(lines):
+    files_list = [[idx] * int(char) if char != "0" else [] for idx, char in enumerate(lines[::2])]
+    spaces_list = [int(char) for char in lines[1::2]]
+    return files_list, spaces_list
+
+
+def calculate_checksum(files_list: List[List[int]], moved_files: List[List[int]]) -> int:
+    return sum(
+        [
+            int(char) * idx
+            for idx, char in enumerate(
+                chain.from_iterable(chain.from_iterable(zip_longest(files_list, moved_files, fillvalue=[])))
+            )
+        ]
     )
-
-    space_str = "".join([string for string in chained_items if len(string) > 0])
-
-    while not re.match(r"^\d+(\.+)$", space_str):
-
-        first_dot_idx = get_first_dot_index(space_str)
-        last_digit_index = get_last_digit_index(space_str)
-        space_list = split_string(space_str)
-        space_list[first_dot_idx] = space_list[last_digit_index]
-        space_list[last_digit_index] = "."
-        space_str = "".join(space_list)
-
-    return sum([int(char) * idx for idx, char in enumerate(space_str) if char != "."])
 
 
 ## Implementation of PART 2
 
 
 def solve_level2(filename: str):
-    lines = read_input_lines(filename)
-    result = 2
-    return result
+    lines = read_input_lines(filename)[0]
+    files_list, spaces_list = split_input_line(lines)
+    moved_files = [list() for _ in range(len(files_list))]
+    for file_block_idx in range(len(files_list) - 1, 0, -1):
+        alloc_index = search_enough_space(spaces_list, len(files_list[file_block_idx]), file_block_idx)
+        if alloc_index == -1:
+            continue
+        spaces_list[alloc_index] -= len(files_list[file_block_idx])
+        moved_files[alloc_index].extend(files_list[file_block_idx])
+        files_list[file_block_idx] = [0] * len(files_list[file_block_idx])
+    moved_files_with_spaces = [
+        files + [0] * nb_spaces if nb_spaces else files for files, nb_spaces in zip_longest(moved_files, spaces_list)
+    ]
+    return calculate_checksum(files_list, moved_files_with_spaces)
+
+
+def search_enough_space(spaces_list: List[int], required_space: int, remaining_file_blocks: int) -> int:
+    for idx, space in enumerate(spaces_list):
+        if space >= required_space and idx < remaining_file_blocks:
+            return idx
+    return -1
 
 
 if __name__ == "__main__":
@@ -77,6 +87,6 @@ if __name__ == "__main__":
     filename2 = f"{current_directory}/input2.txt"
 
     # get_input_if_not_exists(2024, current_directory, 1)
-    print(solve_level1(filename1))
-    # get_input_if_not_exists(2024, current_directory, 2)
-    # print(solve_level2(filename2))
+    # print(solve_level1(filename1))
+    get_input_if_not_exists(2024, current_directory, 2)
+    print(solve_level2(filename2))
