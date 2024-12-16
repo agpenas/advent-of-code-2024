@@ -1,7 +1,7 @@
 import os.path
 from typing import List, Tuple
-import dotenv
 
+import dotenv
 from utils.utils import get_input_if_not_exists, read_input_lines
 
 dotenv.load_dotenv()
@@ -10,7 +10,7 @@ dotenv.load_dotenv()
 ## Implementation of PART 1
 
 
-def get_initial_positions(array: List[List[str]]):
+def get_initial_positions(array: List[List[int]]) -> List[Tuple[int, int]]:
     initial_positions = list()
     for j, row in enumerate(array):
         for i, char in enumerate(row):
