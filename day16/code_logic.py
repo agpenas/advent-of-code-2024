@@ -56,8 +56,8 @@ class Maze:
             step_cost: int = 1 + 1000 * int(offset != reindeer.direction)
             if next_pos in self.walls_set:
                 continue
-            if self.cost_mapping.get(next_pos, 100_000_000) >= self.cost_mapping.get(current_pos) + step_cost:
-                cost = self.cost_mapping.get(current_pos) + step_cost
+            if self.cost_mapping.get(next_pos, 100_000_000) >= reindeer.cum_cost + step_cost:
+                cost = reindeer.cum_cost + step_cost
                 self.update_position_cost(next_pos, cost)
                 self.exploration_queue.append((next_pos, HypotheticReindeer(next_pos, offset, cost)))
 
@@ -112,6 +112,6 @@ if __name__ == "__main__":
     filename2 = f"{current_directory}/input2.txt"
 
     get_input_if_not_exists(2024, current_directory, 1)
-    print(solve_level1(filename1))
+    print(solve_level1(sample_file))
     # get_input_if_not_exists(2024, current_directory, 2)
     # print(solve_level2(filename2))
