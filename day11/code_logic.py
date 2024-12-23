@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from itertools import chain
 import os.path
@@ -38,19 +38,6 @@ class MagicStone:
             return [MagicStone(self._mult_2024())]
 
 
-def solve_level1(filename: str):
-    lines = read_input_lines(filename)[0]
-    magic_stones_list = [MagicStone(int(str_nb)) for str_nb in lines.split()]
-    for _ in range(25):
-        blinked_stones = [stone.blink() for stone in magic_stones_list]
-        magic_stones_list = list(chain.from_iterable(blinked_stones))
-
-    return len(magic_stones_list)
-
-
-## Implementation of PART 2
-
-
 def recursive_stone_generator(magic_stone: MagicStone, nb_iter: int):
     if nb_iter == 1:
         yield magic_stone.blink()
@@ -59,16 +46,51 @@ def recursive_stone_generator(magic_stone: MagicStone, nb_iter: int):
             yield from recursive_stone_generator(stone, nb_iter - 1)
 
 
+def solve_level1(filename: str):
+    lines = read_input_lines(filename)[0]
+    nb_stones = 0
+    numbers_counter = Counter([int(str_nb) for str_nb in lines.split()])
+    for step in range(5):
+        stone_counter = Counter()
+        for iter_stone_nb, nb_stones in numbers_counter.items():
+            iter_stone_counter = Counter(
+                [
+                    stone.number
+                    for stone in chain.from_iterable(
+                        recursive_stone_generator(MagicStone(iter_stone_nb), 5)
+                    )
+                ]
+            )
+            mult_counter = {k: v * nb_stones for k, v in iter_stone_counter.items()}
+            stone_counter.update(mult_counter)
+        numbers_counter = stone_counter
+
+    return numbers_counter.total()
+
+
+## Implementation of PART 2
+
+
 def solve_level2(filename: str):
     lines = read_input_lines(filename)[0]
     nb_stones = 0
-    magic_stones_list = [MagicStone(int(str_nb)) for str_nb in lines.split()]
-    for initial_stone in magic_stones_list:
-        print("Starting a new stone ! ")
-        for final_stone_list in tqdm(recursive_stone_generator(initial_stone, 75)):
-            nb_stones += len(final_stone_list)
+    numbers_counter = Counter([int(str_nb) for str_nb in lines.split()])
+    for step in range(15):
+        stone_counter = Counter()
+        for iter_stone_nb, nb_stones in numbers_counter.items():
+            iter_stone_counter = Counter(
+                [
+                    stone.number
+                    for stone in chain.from_iterable(
+                        recursive_stone_generator(MagicStone(iter_stone_nb), 5)
+                    )
+                ]
+            )
+            mult_counter = {k: v * nb_stones for k, v in iter_stone_counter.items()}
+            stone_counter.update(mult_counter)
+        numbers_counter = stone_counter
 
-    return nb_stones
+    return numbers_counter.total()
 
 
 if __name__ == "__main__":
@@ -82,4 +104,4 @@ if __name__ == "__main__":
     # get_input_if_not_exists(2024, current_directory, 1)
     # print(solve_level1(filename1))
     get_input_if_not_exists(2024, current_directory, 2)
-    print(solve_level2(filename2))
+    print(solve_level2(sample_file))
