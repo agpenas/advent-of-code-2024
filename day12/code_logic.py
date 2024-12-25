@@ -99,58 +99,28 @@ def solve_level1(filename: str):
 
 
 ## Implementation of PART 2
-def group_coords_by_straight_lines(
-    adj_set: Set[Tuple[int, int]], coords_set: Set[Tuple[int, int]]
-) -> int:
 
-    def _are_sides_in_coords(
-        coord_tup: Tuple[int, int], coords_set: Set[Tuple[int, int]], type: str
-    ) -> bool:
-        if type == "vertical":
-            return any(
-                [(coord_tup[0] + off, coord_tup[1]) in coords_set for off in [-1, 1]]
+
+def count_number_of_corners(coords_set: Set[Tuple[int, int]]) -> int:
+    corners_count = 0
+    for x, y in coords_set:
+        vertical_offsets, horizontal_offsets = [(1, 0), (-1, 0)], [(0, 1), (0, -1)]
+        for offset_pair in product(vertical_offsets, horizontal_offsets):
+            neighs_in_set = sum(
+                [
+                    int((x + offset[0], y + offset[1]) in coords_set)
+                    for offset in offset_pair
+                ]
             )
-        elif type == "horizontal":
-            return any(
-                [(coord_tup[0], coord_tup[1] + off) in coords_set for off in [-1, 1]]
+            if neighs_in_set == 0:
+                corners_count += 1
+            diagonal_coords = (
+                x + offset_pair[0][0] + offset_pair[1][0],
+                y + offset_pair[0][1] + offset_pair[1][1],
             )
-        else:
-            raise ValueError("Invalid type")
-
-    already_assigned_coords = set()
-    lines = list()
-    for coords in adj_set:
-        if coords in already_assigned_coords:
-            continue
-
-        # check vertical line
-        line = deque([coords])
-        while (line[0][0] - 1, line[0][1]) in adj_set and _are_sides_in_coords(
-            (line[0][0] - 1, line[0][1]), coords_set, "horizontal"
-        ):
-            line.appendleft((line[0][0] - 1, line[0][1]))
-        while (line[-1][0] + 1, line[-1][1]) in adj_set and _are_sides_in_coords(
-            (line[-1][0] + 1, line[-1][1]), coords_set, "horizontal"
-        ):
-            line.append((line[-1][0] + 1, line[-1][1]))
-        if len(line) > 1:
-            already_assigned_coords.update(line)
-            lines.append(line)
-            continue
-
-        # check vertical line
-        while (line[0][0], line[0][1] - 1) in adj_set and _are_sides_in_coords(
-            (line[0][0], line[0][1] - 1), coords_set, "vertical"
-        ):
-            line.appendleft((line[0][0], line[0][1] - 1))
-        while (line[-1][0], line[-1][1] + 1) in adj_set and _are_sides_in_coords(
-            (line[-1][0], line[-1][1] + 1), coords_set, "vertical"
-        ):
-            line.append((line[-1][0], line[-1][1] + 1))
-        if len(line) > 1:
-            already_assigned_coords.update(line)
-            lines.append(line)
-    return lines
+            if neighs_in_set == 2 and diagonal_coords not in coords_set:
+                corners_count += 1
+    return corners_count
 
 
 def solve_level2(filename: str):
@@ -160,24 +130,7 @@ def solve_level2(filename: str):
     region_to_coords = inverse_coords_to_region(coords_to_region)
     price = 0
     for coords in region_to_coords.values():
-        adjacent_counter = {
-            xy: count
-            for xy, count in get_adjacent_positions_counter(coords).items()
-            if xy not in coords
-        }
-        lines = group_coords_by_straight_lines(adjacent_counter.keys(), coords)
-        assigned_in_lines_counter = Counter(chain.from_iterable(lines))
-        extra_unitary_fences = sum(
-            max(adjacent_counter[coord] - assigned_in_lines_counter[coord], 0)
-            for coord in adjacent_counter
-        )
-        print(
-            get_region_area(coords),
-            (len(lines)),
-            (extra_unitary_fences),
-            get_region_area(coords) * (len(lines) + extra_unitary_fences),
-        )
-        price += get_region_area(coords) * (len(lines) + extra_unitary_fences)
+        price += get_region_area(coords) * count_number_of_corners(coords)
 
     return price
 
