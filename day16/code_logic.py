@@ -73,6 +73,8 @@ class Maze:
                 cost = reindeer.cum_cost + step_cost
                 self.update_position_cost(next_pos, cost)
                 self.update_leaving_cost(current_pos, cost)
+                if next_pos == self.end_coords:
+                    self.update_leaving_cost(next_pos, cost + step_cost)
                 self.exploration_queue.append(
                     (
                         next_pos,
@@ -125,83 +127,42 @@ def solve_level1(filename: str):
 
 
 ## Implementation of PART 2
-class PrunableMaze(Maze):
+class BackwardableMaze(Maze):
     def __init__(self, array):
         super().__init__(array)
+        self.backwards_exploration_queue = [self.end_coords]
+        self.valid_paths_coords = set([self.end_coords])
 
-    def coalesce_max_exploring_leaving_cost(self):
-        self.coalesced_mapping = dict()
-        for j, row in enumerate(self.array):
-            for i, char in enumerate(row):
-                if (i, j) in self.walls_set.union({self.start_coords, self.end_coords}):
-                    continue
-                self.coalesced_mapping[(i, j)] = max(
-                    [
-                        self.exploring_cost_mapping.get((i, j), -1),
-                        self.leaving_cost_mapping.get((i, j), -1),
-                    ]
-                )
+    def explore_backwards(self):
+        self.leaving_cost_mapping[self.end_coords] = (
+            self.exploring_cost_mapping.get(self.end_coords) + 1
+        )
 
-    def print_coalesced_grid(self, cell_length=5):
-        self.print_grid(self.coalesced_mapping, cell_length)
+        while self.backwards_exploration_queue:
+            current_pos = self.backwards_exploration_queue.pop(0)
+            self.explore_position_backwards(current_pos)
 
-    def try_to_prune_grid(self):
-        nb_changes_made = 0
-        for j, row in enumerate(self.array):
-            for i, _ in enumerate(row):
-                if (i, j) in self.walls_set.union({self.start_coords, self.end_coords}):
-                    continue
-                if not self.coalesced_mapping.get((i, j)):
-                    continue
-
-                neigh_costs = list()
-                for offset in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                    neigh_costs.append(
-                        self.coalesced_mapping.get((i + offset[0], j + offset[1]), None)
-                    )
-
-                not_none_neigh_costs = [x for x in neigh_costs if x is not None]
-
-                if not not_none_neigh_costs:
-                    self.delete_coalesced_cost((i, j))
-                    nb_changes_made = True
-                    continue
-                if (
-                    max(not_none_neigh_costs)
-                    > self.coalesced_mapping.get((i, j))
-                    >= min(not_none_neigh_costs)
-                ):
-                    continue
-                self.delete_coalesced_cost((i, j))
-                nb_changes_made += 1
-        return nb_changes_made
-
-    def delete_coalesced_cost(self, position):
-        self.coalesced_mapping[position] = None
-
-    def launch_coalesced_map_prunning(self):
-        self.coalesced_mapping[self.end_coords] = self.get_cost_to_end() + 1
-        self.coalesced_mapping[self.start_coords] = 0
-        while self.try_to_prune_grid():
-            print(self.get_path_length())
-            pass
-
-    def get_path_length(self):
-        return sum([1 for x in self.coalesced_mapping.values() if x]) + 1
+    def explore_position_backwards(self, coords):
+        for offset in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            next_pos = (coords[0] + offset[0], coords[1] + offset[1])
+            if next_pos in self.walls_set:
+                continue
+            if self.leaving_cost_mapping.get(
+                next_pos, 100_000_000
+            ) < self.leaving_cost_mapping.get(coords):
+                self.backwards_exploration_queue.append(next_pos)
+                self.valid_paths_coords.add(next_pos)
 
 
 def solve_level2(filename: str):
     lines = read_input_lines(filename)
     array = [[char for char in line] for line in lines]
-    maze = PrunableMaze(array)
+    maze = BackwardableMaze(array)
     maze.explore_grid()
+    maze.explore_backwards()
     # maze.print_exploring_grid()
     # maze.print_leaving_grid()
-    maze.coalesce_max_exploring_leaving_cost()
-    # maze.print_coalesced_grid()
-    maze.launch_coalesced_map_prunning()
-    maze.print_coalesced_grid()
-    return maze.get_path_length()
+    return len(maze.valid_paths_coords)
 
 
 if __name__ == "__main__":
@@ -217,4 +178,4 @@ if __name__ == "__main__":
     # get_input_if_not_exists(2024, current_directory, 1)
     # print(solve_level1(sample_file))
     get_input_if_not_exists(2024, current_directory, 2)
-    print(solve_level2(sample_file))
+    print(solve_level2(filename2))
